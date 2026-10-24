@@ -362,14 +362,18 @@ const DEFAULT_SCORING = {
   altCap: 8, same3Weight: 3,             // reward for left/right alternation (capped); penalty for 3 same turns in a row
   rampReward: 0, rampCap: 0,             // reward per ramp (up to rampCap)
   jumpReward: 0, jumpCap: 0,             // reward per jump (up to jumpCap)
+  curveGapMin: 0, curveGapWeight: 0,     // wanted straight pieces between two curves (back-to-back turns force braking)
 };
 
 /**
  * Presets for the PolyTrack "Map Types Guide" spectrum (most turns/braking -> least).
  * Only the tight TurnShort curve is available so far, so:
  *   - Technical / Speed Tech use lots of those tight turns.
- *   - Fake Speed has just a few (each would need braking in practice).
- *   - Full Speed has none: long straights, hills and jumps, until gentle curves are added.
+ *   - Fake Speed has just a few, and they may come close together (those need braking).
+ *   - Full Speed is meant to be drivable holding the accelerator the whole way: a few ISOLATED turns
+ *     with at least 4 straight pieces between them (no chicanes or hairpins), plus hills and jumps.
+ *     Whether the tight TurnShort itself can be taken without braking is untested; the gentler
+ *     TurnLong curves would make this style properly 'full speed' once they are added.
  * "Inversions" (Speed Tech) need wall-ride/loop pieces, which the generator doesn't use yet.
  * --ramp, --jump, --cp-every and --name given on the command line replace the preset's value.
  * --turn only changes how curvy the first random drafts are: the style's scoring still picks the drafts
@@ -383,8 +387,9 @@ const STYLES = {
   speedfun: { label: 'Speed Fun', turn: 0.3, ramp: 0.12, jump: 0.08, cpEvery: 6, scoring: {} },
   fakespeed: { label: 'Fake Speed', turn: 0.12, ramp: 0.20, jump: 0.12, cpEvery: 8,
     scoring: { runLimit: 9, runPenalty: 1.0, ratioLo: 0.08, ratioHi: 0.22, loWeight: 30, hiWeight: 40, altCap: 4, rampReward: 1, rampCap: 6, jumpReward: 1.5, jumpCap: 3 } },
-  fullspeed: { label: 'Full Speed', turn: 0.0, ramp: 0.25, jump: 0.15, cpEvery: 8,
-    scoring: { runLimit: 999, ratioLo: 0, ratioHi: 0, loWeight: 0, hiWeight: 80, altCap: 0, same3Weight: 0, rampReward: 1, rampCap: 8, jumpReward: 2, jumpCap: 4 } },
+  fullspeed: { label: 'Full Speed', turn: 0.10, ramp: 0.25, jump: 0.15, cpEvery: 8,
+    scoring: { runLimit: 999, ratioLo: 0.07, ratioHi: 0.14, loWeight: 200, hiWeight: 60, balanceSlack: 3, altCap: 0, same3Weight: 3,
+      curveGapMin: 4, curveGapWeight: 6, rampReward: 1, rampCap: 8, jumpReward: 2, jumpCap: 4 } },
 };
 const styleKey = (x) => String(x).toLowerCase().replace(/[^a-z]/g, '');
 
@@ -416,6 +421,14 @@ function score(pieces, cfg) {
   for (let i = 1; i < signs.length; i++) if (signs[i] !== signs[i - 1]) alt++;
   for (let i = 2; i < signs.length; i++) if (signs[i] === signs[i - 1] && signs[i] === signs[i - 2]) same3++;
   s += Math.min(alt, cfg.altCap) - cfg.same3Weight * same3;
+
+  // turns that follow each other too closely (chicanes, hairpins) force braking
+  let sinceCurve = Infinity, gapDeficit = 0;
+  for (const p of road) {
+    if (p.kind === 'curve') { if (sinceCurve < cfg.curveGapMin) gapDeficit += cfg.curveGapMin - sinceCurve; sinceCurve = 0; }
+    else sinceCurve++;
+  }
+  s -= cfg.curveGapWeight * gapDeficit;
 
   // hills and jumps can be rewarded too (used by the fast styles)
   const nRamps = road.filter((p) => p.kind === 'ramp').length;
@@ -626,10 +639,12 @@ function main() {
   const curves = pieces.filter((p) => p.kind === 'curve').length;
   const ramps = pieces.filter((p) => p.kind === 'ramp').length;
   const jumps = pieces.filter((p) => p.afterGap).length;
+  let minGap = null, gapRun = null;
+  for (const p of pieces.slice(1, -1)) { if (p.kind === 'curve') { if (gapRun !== null) minGap = minGap === null ? gapRun : Math.min(minGap, gapRun); gapRun = 0; } else if (gapRun !== null) gapRun++; }
   let longestRun = 0, curRun = 0;
   for (const p of pieces.slice(1, -1)) { if (p.kind === 'curve') curRun = 0; else longestRun = Math.max(longestRun, ++curRun); }
   console.log(map);
-  console.log(`\nseed ${args.seed} | ${pieces.length} pieces (${curves} curves, ${ramps} ramps, ${jumps} jumps) | ${cps} checkpoints | longest straight run ${longestRun}${args.styleLabel ? ' | style ' + args.styleLabel : ''} | finish placed | geometry verified`);
+  console.log(`\nseed ${args.seed} | ${pieces.length} pieces (${curves} curves, ${ramps} ramps, ${jumps} jumps) | ${cps} checkpoints | longest straight run ${longestRun}${minGap !== null ? ' | closest curves ' + minGap + ' apart' : ''}${args.styleLabel ? ' | style ' + args.styleLabel : ''} | finish placed | geometry verified`);
   console.log(`quality score ${smart.score.toFixed(1)} (first random draw scored ${smart.firstScore.toFixed(1)}, ${smart.changes} improving changes kept)\n`);
   console.log('TRACK CODE:\n' + code);
 
