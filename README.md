@@ -57,12 +57,16 @@ how curvy, how hilly and how jumpy the track is, and changes what the quality sc
 | `speedtech` | 5.0 | 3 pieces | 0.4 / 0.1 |
 | `speedfun` | 4.0 | 5 pieces | 1 / 0.3 (same as the defaults) |
 | `fakespeed` | 1.8 | 9 pieces | 3 / 1.7 |
-| `fullspeed` | 0 | 28 pieces | 5 / 4 |
+| `fullspeed` | 0.8 | 13 pieces | 4.4 / 2.6 |
 
 Notes: `--ramp`, `--jump`, `--cp-every` and `--name` replace a style's value. `--turn` only nudges the
-random drafts - the style's scoring still steers the result back toward the style. Only the tight
-`TurnShort` curve exists so far, so Full Speed is a straight run with hills and jumps until gentle curves
-are added, and Speed Tech's "inversions" need wall-ride pieces the generator doesn't use yet.
+random drafts - the style's scoring still steers the result back toward the style.
+
+`fullspeed` means you could hold the accelerator the whole way: every track has 1 to 3 turns, always
+at least 4 straight pieces apart (no chicanes, hairpins or back-to-back turns), with hills and jumps on
+the straights. The only turn piece so far is the tight `TurnShort`, and whether it can really be taken
+without braking is untested - the gentler `TurnLong` curves would make this style properly full speed
+once they are added. Speed Tech's "inversions" need wall-ride pieces the generator doesn't use yet.
 
 ## Files
 
