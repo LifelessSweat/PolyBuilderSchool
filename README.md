@@ -104,7 +104,7 @@ them against what actually happened in-game.
   and their block height is the *low* end. Going uphill means facing the ramp along your travel
   direction; going downhill is the same piece turned around. Three ramps are in use:
   `PlaneSlopeUp` (1 cell, +1 level), `PlaneSlopeUpLong` (2 cells, +2) and `PlaneSlope`
-  (1 cell, +2). Measured from 9 real community routes, where the rule matched 94% of the
+  (1 cell, +2). Measured from real community routes, where the rule matched 94% of the
   junctions that could be checked.
 
 ## Known limitations
